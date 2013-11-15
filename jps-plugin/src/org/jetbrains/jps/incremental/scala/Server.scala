@@ -33,7 +33,9 @@ trait Client {
 
   def debug(text: String)
 
-  def generated(source: File, module: File, name: String)
+  def generated(source: File, outputFile: File, name: String)
+
+  def processSource(source: File)
 
   def deleted(module: File)
 

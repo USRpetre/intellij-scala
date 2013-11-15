@@ -28,6 +28,14 @@ public class GlobalSettingsImpl extends JpsElementBase<GlobalSettingsImpl> imple
     return myState.COMPILE_SERVER_SDK;
   }
 
+  public CompilerType getCompilerType() {
+    return CompilerType.valueOf(myState.COMPILER_TYPE);
+  }
+
+  public Order getCompileOrder() {
+    return Order.valueOf(myState.COMPILE_ORDER);
+  }
+
   @NotNull
   @Override
   public GlobalSettingsImpl createCopy() {
@@ -45,5 +53,9 @@ public class GlobalSettingsImpl extends JpsElementBase<GlobalSettingsImpl> imple
     public int COMPILE_SERVER_PORT = 3200;
 
     public String COMPILE_SERVER_SDK;
+
+    public String COMPILER_TYPE = "SCALAC";
+
+    public String COMPILE_ORDER = "Mixed";
   }
 }

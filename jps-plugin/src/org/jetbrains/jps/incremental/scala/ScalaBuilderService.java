@@ -6,12 +6,17 @@ import org.jetbrains.jps.builders.BuildOutputConsumer;
 import org.jetbrains.jps.builders.BuildTargetType;
 import org.jetbrains.jps.builders.DirtyFilesHolder;
 import org.jetbrains.jps.builders.java.JavaSourceRootDescriptor;
+import org.jetbrains.jps.cmdline.ProjectDescriptor;
 import org.jetbrains.jps.incremental.*;
+import org.jetbrains.jps.incremental.scala.model.CompilerType;
+import org.jetbrains.jps.incremental.scala.model.GlobalSettings;
+import org.jetbrains.jps.incremental.scala.model.Order;
 import org.jetbrains.jps.model.JpsProject;
 import org.jetbrains.jps.model.java.JpsJavaExtensionService;
 import org.jetbrains.jps.model.module.JpsModule;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -22,7 +27,10 @@ public class ScalaBuilderService extends BuilderService {
   @NotNull
   @Override
   public List<? extends ModuleLevelBuilder> createModuleLevelBuilders() {
-    return Collections.singletonList(new ScalaBuilderDecorator());
+    List<ScalaBuilderDecorator> result = new ArrayList<ScalaBuilderDecorator>(2);
+    result.add(new ScalaBuilderDecorator(BuilderCategory.SOURCE_PROCESSOR)); //for compile order Scala then Java or Mixed
+    result.add(new ScalaBuilderDecorator(BuilderCategory.OVERWRITING_TRANSLATOR)); //for compile order Java then Scala
+    return result;
   }
 
   @NotNull
@@ -32,13 +40,27 @@ public class ScalaBuilderService extends BuilderService {
   }
 
   private static class ScalaBuilderDecorator extends ScalaBuilder {
+
+    public ScalaBuilderDecorator(BuilderCategory builderCategory) {
+      super(builderCategory);
+    }
+
     @Override
     public ExitCode build(CompileContext context,
                           ModuleChunk chunk,
                           DirtyFilesHolder<JavaSourceRootDescriptor, ModuleBuildTarget> dirtyFilesHolder,
                           OutputConsumer outputConsumer) {
-      JpsProject project = context.getProjectDescriptor().getProject();
+      ProjectDescriptor projectDescriptor = context.getProjectDescriptor();
 
+      //turn off one of the builders
+      GlobalSettings globalSettings = SettingsManager.getGlobalSettings(projectDescriptor.getModel().getGlobal());
+      Order order = globalSettings.getCompileOrder();
+      if (order == Order.JavaThenScala && getCategory() != BuilderCategory.OVERWRITING_TRANSLATOR)
+        return ExitCode.NOTHING_DONE;
+      if (order != Order.JavaThenScala && getCategory() == BuilderCategory.OVERWRITING_TRANSLATOR)
+        return ExitCode.NOTHING_DONE;
+
+      JpsProject project = projectDescriptor.getProject();
       return isScalaProject(project)
           ? super.build(context, chunk, dirtyFilesHolder, outputConsumer)
           : ExitCode.NOTHING_DONE;
@@ -54,9 +76,10 @@ public class ScalaBuilderService extends BuilderService {
     @Override
     public void buildStarted(CompileContext context) {
       JpsProject project = context.getProjectDescriptor().getProject();
+      GlobalSettings settings = SettingsManager.getGlobalSettings(context.getProjectDescriptor().getModel().getGlobal());
 
-      // Disable default Java compiler for a project with Scala facets
-      if (isScalaProject(project)) {
+      // Disable default Java compiler for a project with Scala facets for sbt compiler
+      if (isScalaProject(project) && settings.getCompilerType() == CompilerType.SBT) {
         JpsJavaExtensionService.getInstance()
             .getOrCreateCompilerConfiguration(project)
             .setJavaCompilerId("scala");

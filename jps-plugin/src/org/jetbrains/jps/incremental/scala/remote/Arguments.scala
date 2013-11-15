@@ -2,7 +2,7 @@ package org.jetbrains.jps.incremental.scala
 package remote
 
 import data._
-import model.Order
+import org.jetbrains.jps.incremental.scala.model.{CompilerType, Order}
 import java.io.File
 import Arguments._
 import com.intellij.openapi.util.io.FileUtil
@@ -18,6 +18,8 @@ case class Arguments(sbtData: SbtData, compilerData: CompilerData, compilationDa
 
     val javaHomePath = compilerData.javaHome.map(fileToPath)
 
+    val compilerType = compilerData.compilerType
+
     Seq(
       fileToPath(sbtData.interfaceJar),
       fileToPath(sbtData.sourceJar),
@@ -25,6 +27,7 @@ case class Arguments(sbtData: SbtData, compilerData: CompilerData, compilationDa
       sbtData.javaClassVersion,
       optionToString(compilerJarPaths),
       optionToString(javaHomePath),
+      compilerType.name,
       filesToPaths(compilationData.sources),
       filesToPaths(compilationData.classpath),
       fileToPath(compilationData.output),
@@ -49,6 +52,7 @@ object Arguments {
     javaClassVersion,
     StringToOption(compilerJarPaths),
     StringToOption(javaHomePath),
+    compilerTypeName,
     PathsToFiles(sources),
     PathsToFiles(classpath),
     PathToFile(output),
@@ -70,7 +74,7 @@ object Arguments {
         case PathToFile(file) => file
       }
 
-      val compilerData = CompilerData(compilerJars, javaHome)
+      val compilerData = CompilerData(compilerJars, javaHome, CompilerType.valueOf(compilerTypeName))
 
       val outputToCacheMap = outputs.zip(caches).toMap
 

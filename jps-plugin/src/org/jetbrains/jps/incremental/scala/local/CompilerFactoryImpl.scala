@@ -9,6 +9,7 @@ import sbt.compiler.{AggressiveCompile, IC}
 import xsbti.{F0, Logger}
 import CompilerFactoryImpl._
 import sbt.inc.AnalysisStore
+import org.jetbrains.jps.incremental.scala.model.CompilerType
 
 /**
  * @author Pavel Fatin
@@ -24,15 +25,16 @@ class CompilerFactoryImpl(sbtData: SbtData) extends CompilerFactory {
       IC.newScalaCompiler(scala, compiledIntefaceJar, ClasspathOptions.boot, NullLogger)
     }
 
-    val javac = {
-      val scala = scalaInstance.getOrElse(new ScalaInstance("stub", null, new File(""), new File(""), Seq.empty, None))
+    if (compilerData.compilerType == CompilerType.SBT) {
+      val javac = {
+        val scala = scalaInstance.getOrElse(new ScalaInstance("stub", null, new File(""), new File(""), Seq.empty, None))
+        val classpathOptions = ClasspathOptions.javac(compiler = false)
 
-      val classpathOptions = ClasspathOptions.javac(compiler = false)
-
-      AggressiveCompile.directOrFork(scala, classpathOptions, compilerData.javaHome)
+        AggressiveCompile.directOrFork(scala, classpathOptions, compilerData.javaHome)
+      }
+      new SbtCompilerImpl(javac, scalac, fileToStore)
     }
-
-    new CompilerImpl(javac, scalac, fileToStore)
+    else new ScalacCompilerImpl(scalac)
   }
 }
 

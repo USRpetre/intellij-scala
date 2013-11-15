@@ -22,7 +22,7 @@ class LocalServer extends Server {
     }
 
     if (!client.isCanceled) {
-      client.progress("Searching for changed files...")
+      //client.progress("Searching for changed files...") //I think this message is misleading
       compiler.compile(compilationData, client)
     }
 
@@ -38,7 +38,7 @@ class LocalServer extends Server {
 
 object LocalServer {
   private def createAnalysisStore(cacheFile: File): AnalysisStore = {
-    import sbinary.DefaultProtocol.{immutableMapFormat, immutableSetFormat, StringFormat, tuple2Format}
+    import sbinary.DefaultProtocol.StringFormat
     import sbt.inc.AnalysisFormats._
     val store = FileBasedStore(cacheFile)(AnalysisFormats.analysisFormat, AnalysisFormats.setupFormat)
     AnalysisStore.sync(AnalysisStore.cached(store))
